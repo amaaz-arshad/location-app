@@ -21,6 +21,6 @@ export const distanceInMeters = (
 
 export const deg2rad = (deg: number) => deg * (Math.PI / 180);
 
-export const InRange = (distance: number) => {
-  return (distance <= FIXED_LOCATION.radius).toString();
+export const isInRange = (distance: number) => {
+  return distance <= FIXED_LOCATION.radius;
 };

@@ -1,5 +1,5 @@
 export const FIXED_LOCATION = {
-  latitude: 24.8620292,
-  longitude: 67.0708194,
-  radius: 5, // in meters
+  latitude: 24.86238819252242,
+  longitude: 67.07048432777626,
+  radius: 20, // in meters
 };
