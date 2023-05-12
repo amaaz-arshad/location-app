@@ -1,4 +1,11 @@
-import {Button, StyleSheet, Text, View, ActivityIndicator} from 'react-native';
+import {
+  Button,
+  StyleSheet,
+  Text,
+  View,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import MapView, {
   AnimatedRegion,
@@ -10,27 +17,32 @@ import MapViewDirections from 'react-native-maps-directions';
 import {
   COLORS,
   DEFAULT_LOCATION,
-  GOOGLE_MAPS_APIKEY,
+  LATITUDE_DELTA,
+  LONGITUDE_DELTA,
 } from '../helpers/constants';
-import {getDeltaValue} from '../helpers/utils';
+import {fitAllCoordinates, getDeltaValue, onRecenter} from '../helpers/utils';
 import Geolocation from 'react-native-geolocation-service';
-
-const {LATITUDE_DELTA, LONGITUDE_DELTA} = getDeltaValue();
+import MyLocationIcon from 'react-native-vector-icons/MaterialIcons';
+import {Image} from 'react-native';
+import {GOOGLE_MAPS_API_KEY} from '@env';
 
 const Map = (props: any) => {
   const [origin, setOrigin] = useState<LatLng>();
   const [destination, setDestination] = useState<LatLng>();
   const [isCurrentLocation, setIsCurrentLocation] = useState(false);
   const [coordinates, setCoordinates] = useState(new AnimatedRegion());
+  const [heading, setHeading] = useState<number>(0);
   const mapRef = useRef<MapView>(null);
   const markerRef = useRef<MapMarker>();
 
   useEffect(() => {
-    console.log('getting location');
+    // console.log('getting location');
+    // getLiveLocation();
+    console.log('watching for location changes');
     const id = Geolocation.watchPosition(
       position => {
         console.log(position);
-        const {latitude, longitude} = position.coords;
+        const {latitude, longitude, heading} = position.coords;
         animate({latitude, longitude});
         setOrigin({latitude, longitude});
         setCoordinates(
@@ -42,6 +54,8 @@ const Map = (props: any) => {
           }),
         );
         setIsCurrentLocation(true);
+        console.log('heading:', position.coords.heading);
+        setHeading(heading as number);
       },
       error => {
         setOrigin(DEFAULT_LOCATION);
@@ -59,20 +73,37 @@ const Map = (props: any) => {
     return () => Geolocation.clearWatch(id);
   }, []);
 
-  const getLiveLocation = () => {
-    Geolocation.getCurrentPosition(
-      position => {
-        console.log(position);
-        setOrigin(position.coords);
-        setIsCurrentLocation(true);
-      },
-      error => {
-        setOrigin(DEFAULT_LOCATION);
-        console.log(error);
-      },
-      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
-    );
-  };
+  // const getLiveLocation = () => {
+  //   Geolocation.getCurrentPosition(
+  //     position => {
+  //       // console.log(position);
+  //       const {latitude, longitude, heading} = position.coords;
+  //       animate({latitude, longitude});
+  //       setOrigin({latitude, longitude});
+  //       setCoordinates(
+  //         new AnimatedRegion({
+  //           latitude,
+  //           longitude,
+  //           latitudeDelta: LATITUDE_DELTA,
+  //           longitudeDelta: LONGITUDE_DELTA,
+  //         }),
+  //       );
+  //       setIsCurrentLocation(true);
+  //     },
+  //     error => {
+  //       setOrigin(DEFAULT_LOCATION);
+  //       setCoordinates(
+  //         new AnimatedRegion({
+  //           ...DEFAULT_LOCATION,
+  //           latitudeDelta: LATITUDE_DELTA,
+  //           longitudeDelta: LONGITUDE_DELTA,
+  //         }),
+  //       );
+  //       console.log(error);
+  //     },
+  //     {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+  //   );
+  // };
 
   const getCoordinates = (
     pickupCoordinates: any,
@@ -84,7 +115,7 @@ const Map = (props: any) => {
 
   const animate = (newCoords: LatLng) => {
     if (markerRef.current) {
-      markerRef.current.animateMarkerToCoordinate(newCoords, 4000);
+      markerRef.current.animateMarkerToCoordinate(newCoords, 5000);
     }
   };
 
@@ -107,8 +138,18 @@ const Map = (props: any) => {
                   title="current"
                   // @ts-ignore
                   coordinate={coordinates}
-                  pinColor={COLORS.primary}
-                />
+                  // pinColor={COLORS.primary}
+                >
+                  <Image
+                    source={require('../assets/current.png')}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      transform: [{rotate: `${heading}deg`}],
+                    }}
+                    resizeMode="contain"
+                  />
+                </Marker.Animated>
               )}
               {destination && (
                 <>
@@ -116,24 +157,24 @@ const Map = (props: any) => {
                   <MapViewDirections
                     origin={origin}
                     destination={destination}
-                    apikey={GOOGLE_MAPS_APIKEY}
+                    apikey={GOOGLE_MAPS_API_KEY}
                     strokeWidth={3}
                     strokeColor="red"
-                    optimizeWaypoints={true}
+                    // optimizeWaypoints={true}
                     onReady={result => {
-                      mapRef.current?.fitToCoordinates(result.coordinates, {
-                        edgePadding: {
-                          right: 50,
-                          bottom: 50,
-                          left: 50,
-                          top: 50,
-                        },
-                      });
+                      fitAllCoordinates(mapRef, result.coordinates);
                     }}
                   />
                 </>
               )}
             </MapView>
+            <TouchableOpacity
+              style={styles.recenter}
+              onPress={() => onRecenter(mapRef, origin)}>
+              <View style={styles.relocater}>
+                <MyLocationIcon name="my-location" size={25} color="black" />
+              </View>
+            </TouchableOpacity>
           </View>
           <View style={{flex: 0.05}}>
             <Button
@@ -164,5 +205,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  recenter: {
+    position: 'absolute',
+    top: 20,
+    right: 15,
+  },
+  relocater: {
+    backgroundColor: 'white',
+    padding: 4,
+    borderRadius: 3,
+    elevation: 3,
   },
 });

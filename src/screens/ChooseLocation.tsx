@@ -18,11 +18,9 @@ function ChooseLocation(props: any) {
     useState<LatLng>();
 
   const getPickupDetails = (latitude: number, longitude: number) => {
-    // console.log(lat, lng);
     setPickupCoordinates({latitude, longitude});
   };
   const getDestinationDetails = (latitude: number, longitude: number) => {
-    // console.log(lat, lng);
     setDestinationCoordinates({latitude, longitude});
   };
 

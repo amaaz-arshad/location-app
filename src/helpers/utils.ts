@@ -1,6 +1,19 @@
 import {showMessage} from 'react-native-flash-message';
 import {Dimensions, PermissionsAndroid, Platform} from 'react-native';
-import {FIXED_LOCATION} from './constants';
+import {
+  FIXED_LOCATION,
+  GEOCODE_API,
+  LATITUDE_DELTA,
+  LONGITUDE_DELTA,
+} from './constants';
+import Geolocation from 'react-native-geolocation-service';
+import firestore from '@react-native-firebase/firestore';
+import {UserData} from './types';
+import MapView, {LatLng} from 'react-native-maps';
+import {RefObject} from 'react';
+import axios from 'axios';
+import {GOOGLE_MAPS_API_KEY} from '@env';
+import moment from 'moment';
 
 export const getDistanceInMeters = (
   lat1: number,
@@ -21,7 +34,7 @@ export const getDistanceInMeters = (
   return R * c;
 };
 
-export const deg2rad = (deg: number) => deg * (Math.PI / 180);
+const deg2rad = (deg: number) => deg * (Math.PI / 180);
 
 export const isInRange = (distance: number) => {
   return distance <= FIXED_LOCATION.radius;
@@ -50,10 +63,70 @@ export const getLocationPermission = async () => {
   }
 };
 
-export const getDeltaValue = () => {
+export const requestPermission = async () => {
+  const backgroundgranted = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+    {
+      title: 'Background Location Permission',
+      message:
+        'We need access to your location ' +
+        'so you can get live quality updates.',
+      buttonNeutral: 'Ask Me Later',
+      buttonNegative: 'Cancel',
+      buttonPositive: 'OK',
+    },
+  );
+  if (backgroundgranted === PermissionsAndroid.RESULTS.GRANTED) {
+    console.log('background location permission granted');
+  }
+};
+
+export const getDeltaValue = (latDelta: number) => {
   const screen = Dimensions.get('window');
-  const ASPECT_RATIO = screen.width / screen.height;
-  const LATITUDE_DELTA = 0.0922;
-  const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
-  return {LATITUDE_DELTA, LONGITUDE_DELTA};
+  const aspectRatio = screen.width / screen.height;
+  const longDelta = latDelta * aspectRatio;
+  return longDelta;
+};
+
+export const fitAllCoordinates = (
+  mapRef: RefObject<MapView>,
+  mapViewCoords: LatLng[],
+) => {
+  mapRef.current?.fitToCoordinates(mapViewCoords, {
+    edgePadding: {
+      right: 30,
+      bottom: 50,
+      left: 30,
+      top: 50,
+    },
+  });
+};
+
+export const onRecenter = (mapRef: RefObject<MapView>, coords?: LatLng) => {
+  if (coords) {
+    mapRef.current?.animateToRegion({
+      ...coords,
+      latitudeDelta: LATITUDE_DELTA,
+      longitudeDelta: LONGITUDE_DELTA,
+    });
+  }
+};
+
+export const getAddressFromCoords = async (
+  latitude: number,
+  longitude: number,
+): Promise<string> => {
+  try {
+    let a = new Date().getTime();
+    const response = await axios.get(
+      `${GEOCODE_API}?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`,
+    );
+    let b = new Date().getTime();
+    console.log('axios address response time:', b - a);
+    return response.data.results[0].formatted_address;
+  } catch (error: any) {
+    console.log('error:', error);
+    showError(error.message);
+    return '';
+  }
 };

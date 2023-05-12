@@ -52,7 +52,7 @@ function Range(): JSX.Element {
       Geolocation.clearWatch(id);
       // clearInterval(id);
     };
-  });
+  },[]);
 
   return (
     <View

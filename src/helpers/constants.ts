@@ -1,3 +1,11 @@
+import {getDeltaValue} from './utils';
+
+export const START_TIME = '10:00:00';
+export const END_TIME = '17:00:00';
+export const TIME_INTERVAL = 120000; // in milliseconds
+export const MIN_DISTANCE = 50; // in meters
+export const LATITUDE_DELTA = 0.02;
+export const LONGITUDE_DELTA = getDeltaValue(LATITUDE_DELTA);
 export const FIXED_LOCATION = {
   latitude: 24.8620431,
   longitude: 67.070827,
@@ -21,5 +29,7 @@ export const USER_C = {
 };
 export const COLORS = {
   primary: '#1e88e5',
+  green: 'green',
+  background: '#f5f5f5',
 };
-export const GOOGLE_MAPS_APIKEY = 'AIzaSyBsrSuYpwOOAlNX6uQggM0LXSOj6y0u7qQ';
+export const GEOCODE_API = 'https://maps.googleapis.com/maps/api/geocode/json';
